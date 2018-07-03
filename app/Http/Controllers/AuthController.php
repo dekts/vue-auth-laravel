@@ -22,7 +22,8 @@ class AuthController extends Controller
      */
     public function __construct()
     {
-        $this->middleware('auth:api', ['except' => ['login', 'register']]);
+//        echo "dsjhfsk";exit;
+        $this->middleware('auth:api', ['except' => ['login', 'register', 'verifyUser']]);
     }
 
     /**
@@ -34,11 +35,28 @@ class AuthController extends Controller
     {
         $credentials = request(['email', 'password']);
 
-        if (! $token = auth()->attempt($credentials)) {
-            return response()->json(['error' => 'Unauthorized'], 401);
+        $rules = [
+            'email' => 'required|email',
+            'password' => 'required',
+        ];
+        $validator = Validator::make($credentials, $rules);
+        if($validator->fails()) {
+            return response()->json(['success'=> false, 'error'=> $validator->messages()]);
         }
 
-        return $this->respondWithToken($token);
+        $credentials['is_verified'] = 1;
+
+        try {
+            // attempt to verify the credentials and create a token for the user
+            if (! $token = JWTAuth::attempt($credentials)) {
+                return response()->json(['success' => false, 'error' => 'We cant find an account with this credentials. Please make sure you entered the right information and you have verified your email address.'], 401);
+            }
+        } catch (JWTException $e) {
+            // something went wrong whilst attempting to encode the token
+            return response()->json(['success' => false, 'error' => 'Failed to login, please try again.'], 500);
+        }
+        // all good so return the token
+        return response()->json(['success' => true, 'data'=> [ 'token' => $token ]]);
     }
 
     /**
@@ -69,11 +87,38 @@ class AuthController extends Controller
         $subject = "Please verify your email address.";
         Mail::send('email.verify', ['name' => $name, 'verification_code' => $verification_code],
             function($mail) use ($email, $name, $subject){
-                $mail->from(getenv('FROM_EMAIL_ADDRESS'), "From User/Company Name Goes Here");
+                $mail->from('devat.karetha@viitorcloud.in', "From VueJS Project");
                 $mail->to($email, $name);
                 $mail->subject($subject);
             });
         return response()->json(['success'=> true, 'message'=> 'Thanks for signing up! Please check your email to complete your registration.']);
+    }
+
+    /**
+     * API Verify User
+     *
+     * @param $verification_code
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function verifyUser($verification_code)
+    {
+        $check = DB::table('user_verifications')->where('token',$verification_code)->first();
+        if(!is_null($check)){
+            $user = User::find($check->user_id);
+            if($user->is_verified == 1){
+                return response()->json([
+                    'success'=> true,
+                    'message'=> 'Account already verified..'
+                ]);
+            }
+            $user->update(['is_verified' => 1]);
+            DB::table('user_verifications')->where('token',$verification_code)->delete();
+            return response()->json([
+                'success'=> true,
+                'message'=> 'You have successfully verified your email address.'
+            ]);
+        }
+        return response()->json(['success'=> false, 'error'=> "Verification code is invalid."]);
     }
 
     /**
@@ -87,15 +132,34 @@ class AuthController extends Controller
     }
 
     /**
-     * Log the user out (Invalidate the token).
-     *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function logout()
+    public function users()
     {
-        auth()->logout();
+        $users = User::all();
 
-        return response()->json(['message' => 'Successfully logged out']);
+        return response()->json(['success'=> true, 'data' => $users, 'message'=> 'Users data has been loaded.']);
+    }
+
+    /**
+     * Log out
+     * Invalidate the token, so user cannot use it anymore
+     * They have to relogin to get a new token
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function logout(Request $request)
+    {
+        $this->validate($request, ['token' => 'required']);
+
+        try {
+            JWTAuth::invalidate($request->input('token'));
+            return response()->json(['success' => true, 'message'=> "You have successfully logged out."]);
+        } catch (JWTException $e) {
+            // something went wrong whilst attempting to encode the token
+            return response()->json(['success' => false, 'error' => 'Failed to logout, please try again.'], 500);
+        }
     }
 
     /**

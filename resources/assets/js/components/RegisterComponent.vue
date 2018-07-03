@@ -86,8 +86,7 @@
                     email: this.email,
                     password: this.password,
                 }).then(response => {
-                    console.log(response);
-                    this.flash('Your registration has been done', 'success', {
+                    this.flash(response.data.message, 'success', {
                         timeout: 3000,
                         important: true,
                     });

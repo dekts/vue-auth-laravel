@@ -99,7 +99,7 @@
                     } else if (this.email !== '' && this.password === '') {
                         this.flashMsg = 'Please provide password';
                     } else {
-                        this.flashMsg = 'You are not authorized person';
+                        this.flashMsg = error.response.data.error;
                     }
 
                     this.flash(this.flashMsg, 'error', {

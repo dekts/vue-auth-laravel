@@ -7,6 +7,8 @@ import DashboardComponent from './components/DashboardComponent'
 import LoginComponent from './components/LoginComponent'
 import LogoutComponent from './components/LogoutComponent'
 import RegisterComponent from './components/RegisterComponent'
+import UsersComponent from './components/UsersComponent'
+import VerifyUserComponent from './components/VerifyUserComponent'
 import store from "./store";
 
 const routes = [
@@ -19,6 +21,17 @@ const routes = [
         name: 'dashboard',
         component: DashboardComponent,
         meta: { requiresAuth: true }
+    },
+    {
+        path: '/users',
+        name: 'users',
+        component: UsersComponent,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/user/verify/:verification_code',
+        name: 'verifyUser',
+        component: VerifyUserComponent,
     },
     {
         path: '/login',
@@ -34,7 +47,6 @@ const routes = [
         path: '/register',
         name: 'register',
         component: RegisterComponent,
-        meta: { requiresAuth: false }
     }
 ];
 

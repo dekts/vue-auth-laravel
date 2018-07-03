@@ -29,11 +29,12 @@ Route::group([
     Route::post('logout', 'AuthController@logout');
     Route::post('refresh', 'AuthController@refresh');
     Route::post('me', 'AuthController@me');
-
+    Route::get('user/verify/{verification_code}', 'AuthController@verifyUser');
 });
 
 Route::middleware('auth:api')->group(function () {
     Route::get('dashboard', function () {
         return response()->json(['data' => 'Test Data']);
     });
+    Route::get('users', 'AuthController@users');
 });
